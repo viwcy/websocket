@@ -57,7 +57,7 @@ public class WebSocketServer {
         //从set中删除
         webSocketSet.remove(this);
         subOnlineCount();
-        log.info("【Websocket】 有一连接关闭！当前在线人数为" + getOnlineCount());
+        log.info("【Websocket】 有一连接关闭，当前在线人数为" + getOnlineCount());
     }
 
     /**
@@ -67,7 +67,7 @@ public class WebSocketServer {
      */
     @OnMessage
     public void onMessage(String message) {
-        log.info("【Websocket】 收到客户端发来的消息：{}", message);
+        log.info("【Websocket】 收到客户端发来的消息: {}", message);
     }
 
     /**
