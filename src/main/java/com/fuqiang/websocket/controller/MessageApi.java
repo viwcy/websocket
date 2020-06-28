@@ -24,18 +24,18 @@ import java.io.IOException;
 public class MessageApi {
 
     @PostMapping("/sends")
-    public String sends(@RequestParam String msg) {
+    public String sends(@RequestParam String msg) throws Exception {
         WebSocketServer.sendMessages(msg);
         return "ok";
     }
 
-    @PostMapping("/send")
-    public String send(@RequestParam String msg, @RequestParam String sessionId) {
-        try {
-            return WebSocketServer.sendMessage(msg, sessionId);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return "error...";
-        }
-    }
+//    @PostMapping("/send")
+//    public String send(@RequestParam String msg, @RequestParam String sessionId) {
+//        try {
+//            return WebSocketServer.sendMessage(msg, sessionId);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            return "error...";
+//        }
+//    }
 }

@@ -6,12 +6,13 @@
     <script>
         var webSocket = null;
         var num = 0;
+        var id = '[[${id}]]';
 
         if (typeof (WebSocket) == "undefined") {
             alert("您的浏览器不支持WebSocket");
         } else {
             //实现化WebSocket对象，指定要连接的服务器地址与端口，建立连接
-            webSocket = new WebSocket("ws://localhost:8888/websocket/8888");
+            webSocket = new WebSocket("ws://localhost:8888/websocket/" + id);
             //打开事件
             webSocket.onopen = function () {
                 console.log("Socket 已打开");
@@ -45,9 +46,6 @@
 </head>
 <body>
 <h3>客户端</h3>
-消息数量
-<button id="btn">0</button>
-<br>
 <input type="text" id="msg"/>
 <input type="button" value="发送消息" onclick="sendMsg()"/>
 </body>

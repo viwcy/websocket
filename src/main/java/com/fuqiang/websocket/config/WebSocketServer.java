@@ -1,52 +1,64 @@
 package com.fuqiang.websocket.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import javax.websocket.*;
+import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * websocket服务类
- *
- * @author fuqiang
- * @date 2019/4/17 19:11
+ * <p>Title: WebSocketServer</p>
+ * <p>Description: WebSocketServer</p>
  * <p>
- * ServerEndpoint不支持注入，切记
+ * TODO  @ServerEndpoint 注解是一个类层次的注解，它的功能主要是将目前的类定义成一个websocket服务器端,
+ * TODO  注解的值将被用于监听用户连接的终端访问URL地址,客户端可以通过这个URL来连接到WebSocket服务器端
+ *
+ * @author Fuqiang
+ * @version 0.0.1
  */
-@ServerEndpoint("/websocket/{userid}")
+@ServerEndpoint("/websocket/{remark}")
 @Component
 @Slf4j
 public class WebSocketServer {
     /**
-     * 静态变量，用来记录当前在线连接数。应该把它设计成线程安全的。
+     * 记录当前在线连接数。
      */
-    private static int onlineCount = 0;
+    private static volatile int onlineCount = 0;
     /**
-     * concurrent包的线程安全Set，用来存放每个客户端对应的MyWebSocket对象。相当于多个windows客户端
+     * 存放每个客户端对应的webSocket对象。相当于多个windows客户端
      */
-    private static CopyOnWriteArraySet<WebSocketServer> webSocketSet = new CopyOnWriteArraySet<WebSocketServer>();
+    private static volatile CopyOnWriteArraySet<WebSocketServer> webSocketSet = new CopyOnWriteArraySet<WebSocketServer>();
     /**
      * 与某个客户端的连接会话，需要通过它来给客户端发送数据
      */
     private Session session;
 
+    private String remark;
+
+    /**
+     * 应用上下文，用来获取spring bean
+     */
+    private static ApplicationContext applicationContext;
+
+    public static void setApplicationContext(ApplicationContext applicationContext) {
+        WebSocketServer.applicationContext = applicationContext;
+    }
+
     /**
      * 连接建立成功调用的方法
      */
     @OnOpen
-    public void onOpen(Session session) throws IOException {
+    public void onOpen(@PathParam(value = "remark") String remark, Session session) throws IOException {
+        System.out.println(1/0);
         this.session = session;
-        //加入set中
+        this.remark = remark;
         webSocketSet.add(this);
         addOnlineCount();
-        log.info("【Websocket】 有新的客户端连接，sessionId为{}，当前在线数:{}", session.getId(), getOnlineCount());
-        /*
-         *一定是单发，通知刚链接的windows用户
-         */
-        sendMessage("Websocket链接成功", session.getId());
+        log.info("【Websocket】 链接成功，sessionId: {}，当前链接数: {}", session.getId(), getOnlineCount());
     }
 
     /**
@@ -54,10 +66,9 @@ public class WebSocketServer {
      */
     @OnClose
     public void onClose() {
-        //从set中删除
         webSocketSet.remove(this);
         subOnlineCount();
-        log.info("【Websocket】 有一连接关闭，当前在线人数为" + getOnlineCount());
+        log.info("【Websocket】 有一连接关闭，sessionId: {}，当前链接数: {}", this.session.getId(), getOnlineCount());
     }
 
     /**
@@ -67,7 +78,7 @@ public class WebSocketServer {
      */
     @OnMessage
     public void onMessage(String message) {
-        log.info("【Websocket】 收到客户端发来的消息: {}", message);
+        log.info("【Websocket】 收到客户端发来的消息：{}", message);
     }
 
     /**
@@ -83,7 +94,7 @@ public class WebSocketServer {
     /**
      * 实现服务器主动推送(单发送)
      */
-    public static String sendMessage(String message, String sessionId) throws IOException {
+    public static String sendMessage(String message, String sessionId) {
         Session session = null;
         for (WebSocketServer webSocket : webSocketSet) {
             if (webSocket.session.getId().equals(sessionId)) {
@@ -91,8 +102,13 @@ public class WebSocketServer {
             }
         }
         if (session != null) {
-            session.getBasicRemote().sendText(message);
-            log.info("【Websocket】 向客户端单发送消息：{}", message);
+            try {
+                session.getBasicRemote().sendText(message);
+                log.info("【Websocket】 向客户端单发送消息成功，消息体：{}，sessionId: {}", message, session.getId());
+            } catch (IOException e) {
+                e.printStackTrace();
+                log.info("【Websocket】 向客户端单发送消息失败，消息体: {}，原因: {}", message, e.getCause());
+            }
             return "消息发送成功";
         } else {
             log.info("【Websocket】 未找到该客户端会话，或此会话已关闭");
@@ -100,17 +116,33 @@ public class WebSocketServer {
         }
     }
 
+    public void sendMessage(String message, Session session) {
+        try {
+            session.getBasicRemote().sendText(message);
+            log.info("【Websocket】 向客户端单发送消息成功，消息体：{}，sessionId: {}", message, session.getId());
+        } catch (IOException e) {
+            e.printStackTrace();
+            log.info("【Websocket】 向客户端单发送消息失败，消息体: {}，原因: {}", message, e.getCause());
+        }
+    }
+
+    public void sendMessage(String message) {
+        try {
+            this.session.getBasicRemote().sendText(message);
+            log.info("【Websocket】 向客户端单发送消息成功，消息体：{}，sessionId: {}", message, session.getId());
+        } catch (IOException e) {
+            e.printStackTrace();
+            log.info("【Websocket】 向客户端单发送消息失败，消息体: {}，原因: {}", message, e.getCause());
+        }
+    }
+
     /**
      * 实现服务器主动推送(群发自定义消息)
      */
-    public static void sendMessages(String message) {
+    public static void sendMessages(String message) throws Exception {
         log.info("【Websocket】 向客户端广播消息：{}", message);
         for (WebSocketServer webSocket : webSocketSet) {
-            try {
-                webSocket.session.getBasicRemote().sendText(message);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            webSocket.session.getBasicRemote().sendText(message);
         }
     }
 
@@ -128,5 +160,13 @@ public class WebSocketServer {
 
     public static CopyOnWriteArraySet<WebSocketServer> getWebSocketSet() {
         return webSocketSet;
+    }
+
+    public Session getSession() {
+        return session;
+    }
+
+    public String getRemark() {
+        return remark;
     }
 }

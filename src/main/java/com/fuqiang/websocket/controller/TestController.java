@@ -3,7 +3,9 @@ package com.fuqiang.websocket.controller;
 import com.fuqiang.websocket.config.WebSocketServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -24,8 +26,10 @@ public class TestController {
     @Autowired
     private WebSocketServer webSocketServer;
 
-    @GetMapping("/index")
-    public String test() {
+    @GetMapping("/index/{id}")
+    public String test(@PathVariable String id, Model model) {
+        System.out.println(id);
+        model.addAttribute("id", id);
         return "index";
     }
 }
